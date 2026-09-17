@@ -1,0 +1,2301 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>H₂O Synthesis Console · Bleu Blanc Rouge</title>
+<style>
+  :root {
+    /* Palette tricolore */
+    --fr-blue: #0055A4;
+    --fr-blue-dark: #003F7D;
+    --fr-blue-light: #E6EEF7;
+    --fr-blue-soft: #B8CCE4;
+    --fr-red: #EF4135;
+    --fr-red-dark: #C42B20;
+    --fr-red-light: #FDE9E7;
+    --fr-white: #FFFFFF;
+
+    /* Neutres */
+    --bg: #F4F7FB;
+    --bg-2: #FFFFFF;
+    --bg-3: #EEF3F9;
+    --panel: #FFFFFF;
+    --panel-2: #F7FAFD;
+    --panel-3: #EAF1F8;
+    --border: #D6E0EC;
+    --border-2: #B8CCE4;
+
+    /* Texte */
+    --text: #0B2545;
+    --text-2: #2C4A6E;
+    --text-3: #6B7F98;
+
+    /* États */
+    --accent: #0055A4;
+    --accent-2: #003F7D;
+    --accent-soft: #E6EEF7;
+    --green: #1B7F4B;
+    --green-soft: #E3F5EC;
+    --yellow: #B8860B;
+    --yellow-soft: #FBF1D9;
+    --orange: #D97706;
+    --red: #EF4135;
+    --red-soft: #FDE9E7;
+    --purple: #6B4FBB;
+    --cyan: #0E7490;
+
+    --radius: 6px;
+    --radius-lg: 10px;
+    --mono: 'SF Mono', 'JetBrains Mono', 'Roboto Mono', Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+
+    --shadow-sm: 0 1px 2px rgba(11,37,69,.06);
+    --shadow-md: 0 4px 12px rgba(11,37,69,.08);
+    --shadow-lg: 0 12px 32px rgba(11,37,69,.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font-family: inherit; cursor: pointer; }
+  input, select, button { font-family: inherit; font-size: inherit; color: inherit; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg-3); }
+  ::-webkit-scrollbar-thumb { background: var(--fr-blue-soft); border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--fr-blue); }
+
+  /* ===== BANDE TRICOLORE ===== */
+  .tricolore-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    display: flex;
+    z-index: 9999;
+  }
+  .tricolore-bar span {
+    flex: 1;
+    height: 100%;
+  }
+  .tricolore-bar .b { background: var(--fr-blue); }
+  .tricolore-bar .w { background: var(--fr-white); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .tricolore-bar .r { background: var(--fr-red); }
+
+  /* ===== APP SHELL ===== */
+  .app-shell {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: 52px 1fr 28px;
+    grid-template-areas:
+      "topbar topbar"
+      "sidebar main"
+      "statusbar statusbar";
+    height: 100vh;
+    overflow: hidden;
+    padding-top: 3px;
+  }
+  @media (max-width: 900px) {
+    .app-shell { grid-template-columns: 1fr; grid-template-areas: "topbar" "main" "statusbar"; }
+    .sidebar { display: none; }
+  }
+
+  /* ===== TOP BAR ===== */
+  .topbar {
+    grid-area: topbar;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    z-index: 10;
+    box-shadow: var(--shadow-sm);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: -.2px;
+  }
+  .brand-logo {
+    width: 28px; height: 28px;
+    border-radius: 5px;
+    overflow: hidden;
+    display: flex;
+    box-shadow: 0 0 0 1px var(--border);
+  }
+  .brand-logo span { flex: 1; }
+  .brand-logo .b { background: var(--fr-blue); }
+  .brand-logo .w { background: var(--fr-white); }
+  .brand-logo .r { background: var(--fr-red); }
+  .brand-sub { color: var(--text-3); font-weight: 400; font-size: 11px; }
+
+  .topbar-divider { width: 1px; height: 22px; background: var(--border); }
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-3);
+  }
+  .breadcrumb span.active { color: var(--fr-blue); font-weight: 600; }
+  .breadcrumb .sep { color: var(--border-2); }
+  .topbar-spacer { flex: 1; }
+  .topbar-actions { display: flex; align-items: center; gap: 8px; }
+
+  .conn-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--green);
+    font-family: var(--mono);
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: var(--green-soft);
+    border: 1px solid rgba(27,127,75,.25);
+  }
+  .conn-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulseDot 2s infinite;
+  }
+  @keyframes pulseDot { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+
+  .icon-btn {
+    width: 32px; height: 32px;
+    border: 1px solid var(--border);
+    background: var(--bg-2);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-2);
+    transition: all .15s;
+    font-size: 14px;
+  }
+  .icon-btn:hover { background: var(--accent-soft); color: var(--fr-blue); border-color: var(--fr-blue); }
+  .icon-btn:active { transform: scale(.95); }
+
+  .btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-2);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all .15s;
+  }
+  .btn:hover { background: var(--accent-soft); border-color: var(--fr-blue); color: var(--fr-blue); }
+  .btn.primary {
+    background: var(--fr-blue);
+    border-color: var(--fr-blue);
+    color: white;
+  }
+  .btn.primary:hover { background: var(--fr-blue-dark); border-color: var(--fr-blue-dark); color: white; }
+  .btn.danger {
+    color: var(--fr-red);
+    border-color: rgba(239,65,53,.3);
+    background: white;
+  }
+  .btn.danger:hover { background: var(--fr-red-soft); border-color: var(--fr-red); }
+
+  /* ===== SIDEBAR ===== */
+  .sidebar {
+    grid-area: sidebar;
+    background: var(--bg-2);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 12px 8px;
+  }
+  .nav-section {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .8px;
+    color: var(--text-3);
+    padding: 12px 10px 6px;
+    font-weight: 700;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    color: var(--text-2);
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 500;
+    transition: all .12s;
+    border: 1px solid transparent;
+    width: 100%;
+    background: transparent;
+    text-align: left;
+    position: relative;
+  }
+  .nav-item:hover { background: var(--accent-soft); color: var(--fr-blue); }
+  .nav-item.active {
+    background: var(--accent-soft);
+    color: var(--fr-blue);
+    border-color: var(--fr-blue-soft);
+    font-weight: 600;
+  }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 18px;
+    background: var(--fr-blue);
+    border-radius: 0 3px 3px 0;
+  }
+  .nav-item .nav-icon { width: 16px; text-align: center; font-size: 13px; opacity: .9; }
+  .nav-item .nav-badge {
+    margin-left: auto;
+    font-size: 10px;
+    font-family: var(--mono);
+    background: var(--bg-3);
+    padding: 1px 6px;
+    border-radius: 8px;
+    color: var(--text-3);
+  }
+  .nav-item.active .nav-badge { background: var(--fr-blue); color: white; }
+
+  /* ===== MAIN ===== */
+  .main {
+    grid-area: main;
+    overflow-y: auto;
+    padding: 20px 24px;
+    background: var(--bg);
+  }
+  .page { display: none; }
+  .page.active { display: block; animation: fadeIn .2s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .page-header {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid var(--fr-blue);
+    position: relative;
+  }
+  .page-header::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 60px;
+    height: 2px;
+    background: var(--fr-red);
+  }
+  .page-header h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -.3px;
+    color: var(--fr-blue-dark);
+  }
+  .page-header p { color: var(--text-3); font-size: 12px; margin-top: 2px; }
+  .page-header-actions { display: flex; gap: 8px; }
+
+  /* ===== GRID ===== */
+  .grid { display: grid; gap: 16px; }
+  .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 1200px) { .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 900px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+  /* ===== PANEL ===== */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: border-color .15s, box-shadow .15s;
+    box-shadow: var(--shadow-sm);
+  }
+  .panel:hover { border-color: var(--fr-blue-soft); box-shadow: var(--shadow-md); }
+  .panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel-2);
+  }
+  .panel-header h2 {
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: -.1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--fr-blue-dark);
+  }
+  .panel-header h2::before {
+    content: '';
+    width: 3px;
+    height: 14px;
+    background: var(--fr-blue);
+    border-radius: 2px;
+  }
+  .panel-header .panel-meta {
+    font-size: 11px;
+    color: var(--text-3);
+    font-family: var(--mono);
+  }
+  .panel-body { padding: 16px; }
+  .panel-body.flush { padding: 0; }
+
+  /* ===== KPI ===== */
+  .kpi {
+    padding: 14px 16px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    transition: all .15s;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .kpi::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--fr-blue) 0%, var(--fr-blue) 33%, var(--fr-white) 33%, var(--fr-white) 66%, var(--fr-red) 66%, var(--fr-red) 100%);
+  }
+  .kpi:hover { border-color: var(--fr-blue); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .kpi-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--text-3);
+    font-weight: 700;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .kpi-value {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -.5px;
+    margin: 6px 0 4px;
+    font-family: var(--mono);
+    color: var(--fr-blue-dark);
+  }
+  .kpi-value small { font-size: 12px; color: var(--text-3); font-weight: 500; margin-left: 2px; }
+  .kpi-sub {
+    font-size: 11px;
+    color: var(--text-3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .sparkline { height: 24px; margin-top: 6px; }
+
+  /* ===== TABLE ===== */
+  .table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--fr-blue-dark);
+    border-bottom: 2px solid var(--fr-blue-soft);
+    background: var(--panel-2);
+    white-space: nowrap;
+  }
+  .table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-2);
+  }
+  .table tbody tr:hover td { background: var(--accent-soft); color: var(--text); }
+  .table tbody tr:last-child td { border-bottom: none; }
+  .table .num { text-align: right; font-family: var(--mono); }
+  .table .accent { color: var(--fr-blue); font-weight: 600; }
+  .table .mono { font-family: var(--mono); }
+
+  /* ===== TAGS ===== */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 700;
+    font-family: var(--mono);
+    letter-spacing: .2px;
+  }
+  .tag::before {
+    content: '';
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .tag.green { background: var(--green-soft); color: var(--green); }
+  .tag.yellow { background: var(--yellow-soft); color: var(--yellow); }
+  .tag.orange { background: #FDF0E1; color: var(--orange); }
+  .tag.red { background: var(--fr-red-soft); color: var(--fr-red-dark); }
+  .tag.blue { background: var(--accent-soft); color: var(--fr-blue); }
+  .tag.purple { background: #EFE9FB; color: var(--purple); }
+  .tag.gray { background: var(--bg-3); color: var(--text-3); }
+
+  /* ===== FORM ===== */
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .field-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 6px;
+  }
+  .field-label { font-size: 11.5px; color: var(--text-2); font-weight: 600; }
+  .field-value { font-family: var(--mono); font-size: 11.5px; color: var(--fr-blue); font-weight: 700; }
+
+  input[type="range"] {
+    width: 100%;
+    height: 4px;
+    -webkit-appearance: none;
+    background: var(--bg-3);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--fr-blue);
+    border: 2px solid white;
+    box-shadow: 0 0 0 1px var(--fr-blue), 0 0 8px rgba(0,85,164,.3);
+    cursor: pointer;
+    transition: transform .12s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  input[type="range"]::-moz-range-thumb {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--fr-blue);
+    border: 2px solid white;
+    cursor: pointer;
+  }
+  select, input[type="number"], input[type="text"] {
+    width: 100%;
+    padding: 6px 10px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 12px;
+    font-family: var(--mono);
+    outline: none;
+    transition: border-color .15s;
+  }
+  select:focus, input:focus { border-color: var(--fr-blue); box-shadow: 0 0 0 3px rgba(0,85,164,.1); }
+
+  /* ===== VALUE GRID ===== */
+  .value-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+  }
+  .value-item {
+    padding: 10px 12px;
+    background: var(--panel-2);
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: all .15s;
+  }
+  .value-item:hover { border-color: var(--fr-blue-soft); background: var(--accent-soft); }
+  .value-item .v-label {
+    font-size: 10.5px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    font-weight: 700;
+  }
+  .value-item .v-value {
+    font-size: 14px;
+    font-weight: 700;
+    font-family: var(--mono);
+    color: var(--fr-blue);
+    margin-top: 3px;
+    letter-spacing: -.2px;
+  }
+  .value-item .v-value.green { color: var(--green); }
+  .value-item .v-value.yellow { color: var(--yellow); }
+  .value-item .v-value.red { color: var(--fr-red); }
+  .value-item .v-value.purple { color: var(--purple); }
+
+  /* ===== ALERT ===== */
+  .alert {
+    display: flex;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+    border: 1px solid;
+    margin-top: 12px;
+    border-left-width: 4px;
+  }
+  .alert-icon { flex-shrink: 0; font-size: 14px; }
+  .alert.info { background: var(--accent-soft); border-color: var(--fr-blue-soft); border-left-color: var(--fr-blue); color: var(--text-2); }
+  .alert.warn { background: var(--yellow-soft); border-color: #EFD9A0; border-left-color: var(--yellow); color: var(--text-2); }
+  .alert.danger { background: var(--fr-red-soft); border-color: #F5B7B1; border-left-color: var(--fr-red); color: var(--text-2); }
+  .alert.success { background: var(--green-soft); border-color: #A7DCC3; border-left-color: var(--green); color: var(--text-2); }
+  .alert strong { color: var(--text); }
+
+  /* ===== CHART ===== */
+  .chart-wrap { position: relative; width: 100%; }
+  .chart-wrap canvas { display: block; width: 100%; }
+  .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--text-3);
+  }
+  .chart-legend-item { display: flex; align-items: center; gap: 6px; }
+  .chart-legend-dot { width: 10px; height: 3px; border-radius: 2px; }
+
+  /* ===== PFD ===== */
+  .pfd {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 24px 16px;
+    background: var(--panel-2);
+    border-radius: 8px;
+    overflow-x: auto;
+    border: 1px solid var(--border);
+  }
+  .pfd-node {
+    flex-shrink: 0;
+    padding: 10px 14px;
+    background: white;
+    border: 2px solid var(--border-2);
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-family: var(--mono);
+    text-align: center;
+    min-width: 90px;
+    transition: all .15s;
+    cursor: default;
+    color: var(--text-2);
+  }
+  .pfd-node:hover { border-color: var(--fr-blue); box-shadow: 0 0 0 3px rgba(0,85,164,.1); color: var(--fr-blue); }
+  .pfd-node.accent { border-color: var(--fr-blue); color: var(--fr-blue); background: var(--accent-soft); }
+  .pfd-node.purple { border-color: var(--purple); color: var(--purple); background: #EFE9FB; }
+  .pfd-node.green { border-color: var(--green); color: var(--green); background: var(--green-soft); }
+  .pfd-node.yellow { border-color: var(--yellow); color: var(--yellow); background: var(--yellow-soft); }
+  .pfd-node.red { border-color: var(--fr-red); color: var(--fr-red); background: var(--fr-red-soft); }
+  .pfd-arrow { flex-shrink: 0; color: var(--fr-blue-soft); padding: 0 8px; font-size: 14px; font-weight: 700; }
+
+  /* ===== GAUGE ===== */
+  .gauge {
+    padding: 12px;
+    background: var(--panel-2);
+    border-radius: 8px;
+    text-align: center;
+    transition: all .15s;
+    border: 1px solid transparent;
+  }
+  .gauge:hover { background: var(--accent-soft); border-color: var(--fr-blue-soft); }
+  .gauge-label {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--text-3);
+    font-weight: 700;
+  }
+  .gauge-value {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--fr-blue-dark);
+    margin: 4px 0 6px;
+    letter-spacing: -.3px;
+  }
+  .gauge-bar { height: 4px; background: var(--bg-3); border-radius: 2px; overflow: hidden; }
+  .gauge-fill { height: 100%; background: var(--fr-blue); border-radius: 2px; transition: width .3s ease; }
+  .gauge-fill.green { background: var(--green); }
+  .gauge-fill.yellow { background: var(--yellow); }
+  .gauge-fill.red { background: var(--fr-red); }
+
+  /* ===== STATUS BAR ===== */
+  .statusbar {
+    grid-area: statusbar;
+    background: var(--fr-blue-dark);
+    color: rgba(255,255,255,.85);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    font-size: 11px;
+    font-family: var(--mono);
+    gap: 16px;
+    position: relative;
+  }
+  .statusbar::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--fr-blue) 0%, var(--fr-blue) 33%, var(--fr-white) 33%, var(--fr-white) 66%, var(--fr-red) 66%, var(--fr-red) 100%);
+  }
+  .statusbar .sb-item { display: flex; align-items: center; gap: 6px; }
+  .statusbar .sb-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .statusbar .sb-dot.green { background: #4ADE80; box-shadow: 0 0 4px #4ADE80; }
+  .statusbar .sb-spacer { flex: 1; }
+
+  /* ===== MOLECULE ===== */
+  .mol-canvas {
+    width: 100%;
+    height: 380px;
+    background: var(--panel-2);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: block;
+    cursor: crosshair;
+  }
+  .mol-toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .mol-toolbar .spacer { flex: 1; }
+  .counter {
+    font-family: var(--mono);
+    font-size: 11px;
+    display: flex;
+    gap: 12px;
+    color: var(--text-3);
+    padding: 6px 12px;
+    background: var(--panel-2);
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  .counter span strong { font-weight: 700; }
+
+  /* ===== TOAST ===== */
+  .toast-container {
+    position: fixed;
+    bottom: 40px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 1000;
+    pointer-events: none;
+  }
+  .toast {
+    background: white;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--fr-blue);
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    box-shadow: var(--shadow-lg);
+    min-width: 240px;
+    max-width: 360px;
+    pointer-events: auto;
+    animation: slideIn .25s ease;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .toast.success { border-left-color: var(--green); }
+  .toast.warn { border-left-color: var(--yellow); }
+  .toast.error { border-left-color: var(--fr-red); }
+  .toast-title { font-weight: 700; color: var(--fr-blue-dark); font-size: 12px; }
+  .toast-msg { color: var(--text-3); font-size: 11px; margin-top: 1px; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+  /* ===== MODAL ===== */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(11,37,69,.5);
+    backdrop-filter: blur(2px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    padding: 20px;
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    max-width: 560px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+  }
+  .modal::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--fr-blue) 0%, var(--fr-blue) 33%, var(--fr-white) 33%, var(--fr-white) 66%, var(--fr-red) 66%, var(--fr-red) 100%);
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .modal-header h3 { font-size: 14px; font-weight: 700; color: var(--fr-blue-dark); }
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--text-3);
+    font-size: 20px;
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s;
+  }
+  .modal-close:hover { background: var(--fr-red-soft); color: var(--fr-red); }
+  .modal-body { padding: 18px; font-size: 12.5px; color: var(--text-2); line-height: 1.6; }
+  .modal-body h4 { font-size: 12.5px; color: var(--fr-blue-dark); margin: 12px 0 6px; }
+  .modal-body ul { margin-left: 18px; margin-top: 6px; }
+  .modal-body li { margin-bottom: 4px; }
+
+  /* ===== TOOLTIP ===== */
+  .tooltip {
+    position: fixed;
+    background: var(--fr-blue-dark);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    max-width: 260px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .12s;
+    z-index: 1000;
+    box-shadow: var(--shadow-lg);
+    line-height: 1.5;
+    font-family: var(--mono);
+  }
+  .tooltip.visible { opacity: 1; }
+  .tooltip strong { color: #7CB8FF; }
+
+  /* ===== MISC ===== */
+  .divider { height: 1px; background: var(--border); margin: 12px 0; }
+  .text-muted { color: var(--text-3); }
+  .text-accent { color: var(--fr-blue); }
+  .text-green { color: var(--green); }
+  .text-yellow { color: var(--yellow); }
+  .text-red { color: var(--fr-red); }
+  .mono { font-family: var(--mono); }
+  .mt-8 { margin-top: 8px; }
+  .mt-12 { margin-top: 12px; }
+  .mt-16 { margin-top: 16px; }
+
+  @media print {
+    .topbar, .sidebar, .statusbar, .btn, .icon-btn { display: none !important; }
+    .app-shell { display: block; height: auto; }
+    .main { padding: 0; overflow: visible; }
+    .panel { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="tricolore-bar"><span class="b"></span><span class="w"></span><span class="r"></span></div>
+
+<div class="app-shell">
+
+  <!-- ===== TOP BAR ===== -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-logo"><span class="b"></span><span class="w"></span><span class="r"></span></div>
+      <div>
+        <div>H₂O Synthesis Console</div>
+        <div class="brand-sub">Process Engineering Suite · v2.4</div>
+      </div>
+    </div>
+    <div class="topbar-divider"></div>
+    <div class="breadcrumb">
+      <span>Projets</span>
+      <span class="sep">/</span>
+      <span>Synthèse H₂ + O₂</span>
+      <span class="sep">/</span>
+      <span class="active" id="crumbPage">Vue d'ensemble</span>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-actions">
+      <div class="conn-status">
+        <div class="conn-dot"></div>
+        <span>LIVE</span>
+      </div>
+      <button class="btn" id="exportBtn" title="Exporter (Ctrl+E)">📥 Export</button>
+      <button class="icon-btn" id="printBtn" title="Imprimer (Ctrl+P)">🖨</button>
+    </div>
+  </div>
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="nav-section">Analyse</div>
+    <button class="nav-item active" data-page="overview"><span class="nav-icon">📊</span>Vue d'ensemble</button>
+    <button class="nav-item" data-page="builder"><span class="nav-icon">⚛️</span>Constructeur<span class="nav-badge">actif</span></button>
+    <button class="nav-item" data-page="reactor"><span class="nav-icon">🔥</span>Réacteur</button>
+    <button class="nav-item" data-page="thermo"><span class="nav-icon">🌡️</span>Thermodynamique</button>
+    <div class="nav-section">Ingénierie</div>
+    <button class="nav-item" data-page="economy"><span class="nav-icon">💰</span>Économie</button>
+    <button class="nav-item" data-page="safety"><span class="nav-icon">⚠️</span>Sécurité HAZOP</button>
+    <button class="nav-item" data-page="specs"><span class="nav-icon">📋</span>Spécifications</button>
+    <div class="nav-section">Ressources</div>
+    <button class="nav-item" data-page="docs"><span class="nav-icon">📚</span>Documentation</button>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main">
+
+    <!-- OVERVIEW -->
+    <section class="page active" id="page-overview">
+      <div class="page-header">
+        <div>
+          <h1>Vue d'ensemble</h1>
+          <p>Synthèse catalytique H₂ + O₂ · Procédé exothermique · 2 H₂ + O₂ → 2 H₂O</p>
+        </div>
+        <div class="page-header-actions">
+          <span class="tag green">Opérationnel</span>
+        </div>
+      </div>
+
+      <div class="grid grid-4">
+        <div class="kpi">
+          <div class="kpi-label">Énergie libérée <span class="tag blue">ΔH</span></div>
+          <div class="kpi-value">15,9 <small>MJ/L</small></div>
+          <div class="kpi-sub">286 kJ/mol H₂O · PCI H₂ 120 MJ/kg</div>
+          <div class="chart-wrap sparkline"><canvas id="sparkEnergy"></canvas></div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">T° flamme adiabatique <span class="tag orange">T<sub>ad</sub></span></div>
+          <div class="kpi-value">3 080 <small>°C</small></div>
+          <div class="kpi-sub">Stœchiométrique · 1 bar</div>
+          <div class="chart-wrap sparkline"><canvas id="sparkTemp"></canvas></div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">LIE H₂ / air <span class="tag yellow">Sécurité</span></div>
+          <div class="kpi-value">4–75 <small>% vol.</small></div>
+          <div class="kpi-sub">Détonation 18–59 % · E<sub>min</sub> 0,017 mJ</div>
+          <div class="chart-wrap sparkline"><canvas id="sparkLIE"></canvas></div>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Coût réactifs <span class="tag red">OPEX</span></div>
+          <div class="kpi-value">0,62 <small>€/kg</small></div>
+          <div class="kpi-sub">H₂ 4 €/kg · O₂ 0,20 €/kg</div>
+          <div class="chart-wrap sparkline"><canvas id="sparkCost"></canvas></div>
+        </div>
+      </div>
+
+      <div class="grid grid-2 mt-16">
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Stœchiométrie de la réaction</h2>
+            <span class="panel-meta">bilan matière</span>
+          </div>
+          <div class="panel-body">
+            <div class="pfd" style="justify-content:center;padding:20px 12px;">
+              <div class="pfd-node accent">2 H₂<br><small style="opacity:.7">4 g</small></div>
+              <div class="pfd-arrow">+</div>
+              <div class="pfd-node purple">O₂<br><small style="opacity:.7">32 g</small></div>
+              <div class="pfd-arrow">→</div>
+              <div class="pfd-node green">2 H₂O<br><small style="opacity:.7">36 g</small></div>
+            </div>
+            <div class="value-grid mt-12">
+              <div class="value-item"><div class="v-label">Ratio molaire</div><div class="v-value">2 : 1</div></div>
+              <div class="value-item"><div class="v-label">Ratio massique</div><div class="v-value">1 : 8</div></div>
+              <div class="value-item"><div class="v-label">Conservation</div><div class="v-value green">4 + 32 = 36</div></div>
+            </div>
+            <div class="alert info">
+              <span class="alert-icon">ℹ️</span>
+              <div>La masse se conserve. Aucun atome n'est créé, seulement réarrangé. Toute production d'eau nécessite un apport extérieur de H et O.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <h2>Schéma de procédé (PFD)</h2>
+            <span class="panel-meta">survolez les nœuds</span>
+          </div>
+          <div class="panel-body">
+            <div class="pfd">
+              <div class="pfd-node accent" data-tooltip="<strong>Source H₂</strong><br>Reformage, électrolyse ou pyrolyse">H₂</div>
+              <div class="pfd-arrow">→</div>
+              <div class="pfd-node" data-tooltip="<strong>Compresseur</strong><br>10–30 bar">Comp.</div>
+              <div class="pfd-arrow">→</div>
+              <div class="pfd-node yellow" data-tooltip="<strong>Mélangeur</strong><br>Zone ATEX · ratio stœchiométrique">Mix</div>
+              <div class="pfd-arrow">→</div>
+              <div class="pfd-node purple" data-tooltip="<strong>Réacteur catalytique</strong><br>Lit fixe Pd/Al₂O₃ · 250 °C">Réact.</div>
+              <div class="pfd-arrow">→</div>
+              <div class="pfd-node green" data-tooltip="<strong>Condenseur</strong><br>30–60 °C · vapeur → liquide">Cond.</div>
+              <div class="pfd-arrow">→</div>
+              <div class="pfd-node accent" data-tooltip="<strong>Eau H₂O</strong><br>Ultra-pure · 18,2 MΩ·cm">H₂O</div>
+            </div>
+            <div class="pfd mt-8" style="padding-top:12px;padding-bottom:12px;">
+              <div class="pfd-node purple" data-tooltip="<strong>Source O₂</strong><br>ASU ou électrolyse">O₂</div>
+              <div class="pfd-arrow">→</div>
+              <div class="pfd-node" data-tooltip="<strong>Compresseur</strong><br>10–30 bar">Comp.</div>
+              <div class="pfd-arrow">→</div>
+              <div class="pfd-node yellow" data-tooltip="<strong>Mélangeur</strong><br>Injection contrôlée">Mix</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel mt-16">
+        <div class="panel-header">
+          <h2>Applications industrielles</h2>
+          <span class="panel-meta">4 domaines clés</span>
+        </div>
+        <div class="panel-body">
+          <div class="grid grid-4">
+            <div class="kpi" style="cursor:pointer" data-modal="app-industry">
+              <div class="kpi-label">🏭 Industrie</div>
+              <div class="kpi-sub mt-8">Vapeur HP, électricité, eau ultra-pure (semi-conducteurs, pharma).</div>
+            </div>
+            <div class="kpi" style="cursor:pointer" data-modal="app-demo">
+              <div class="kpi-label">🔬 Démonstration</div>
+              <div class="kpi-sub mt-8">Kits PEM + électrolyseur pour pédagogie. Jamais de stockage H₂/O₂.</div>
+            </div>
+            <div class="kpi" style="cursor:pointer" data-modal="app-ultrapure">
+              <div class="kpi-label">💧 Eau ultra-pure</div>
+              <div class="kpi-sub mt-8">Recombinaison catalytique Pd/Pt. Résistivité 18,2 MΩ·cm.</div>
+            </div>
+            <div class="kpi" style="cursor:pointer" data-modal="app-decarb">
+              <div class="kpi-label">🌱 Décarbonation</div>
+              <div class="kpi-sub mt-8">Chaudières H₂/O₂ sans CO₂. Remplacement des fossiles.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BUILDER -->
+    <section class="page" id="page-builder">
+      <div class="page-header">
+        <div>
+          <h1>Constructeur moléculaire</h1>
+          <p>Ajoutez des molécules, faites-les réagir · 2 H₂ + O₂ → 2 H₂O</p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Espace de réaction</h2>
+          <div class="counter">
+            <span>H₂ <strong id="countH2" style="color:var(--fr-blue)">0</strong></span>
+            <span>O₂ <strong id="countO2" style="color:var(--purple)">0</strong></span>
+            <span>H₂O <strong id="countH2O" style="color:var(--green)">0</strong></span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="mol-toolbar">
+            <button class="btn" id="addH2">+ Ajouter H₂</button>
+            <button class="btn" id="addO2">+ Ajouter O₂</button>
+            <button class="btn primary" id="reactBtn">⚡ Faire réagir</button>
+            <div class="spacer"></div>
+            <button class="btn danger" id="resetMol">Réinitialiser</button>
+          </div>
+          <canvas class="mol-canvas" id="molCanvas"></canvas>
+          <div class="grid grid-3 mt-12">
+            <div class="value-item"><div class="v-label">Réactif limitant</div><div class="v-value" id="molLimitant">—</div></div>
+            <div class="value-item"><div class="v-label">H₂O produites</div><div class="v-value green" id="molProduit">0</div></div>
+            <div class="value-item"><div class="v-label">Excès</div><div class="v-value yellow" id="molExces">—</div></div>
+          </div>
+          <div class="alert info">
+            <span class="alert-icon">ℹ️</span>
+            <div>La réaction consomme <strong>2 H₂ + 1 O₂</strong> pour produire <strong>2 H₂O</strong>. Les molécules non consommées restent en excès.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REACTOR -->
+    <section class="page" id="page-reactor">
+      <div class="page-header">
+        <div>
+          <h1>Réacteur catalytique</h1>
+          <p>Simulation temps réel · lit fixe Pd/Al₂O₃ · 250 °C · 10 bar</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn primary" id="playReactor">▶ Démarrer</button>
+          <button class="btn danger" id="resetReactor">Réinitialiser</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <h2>Lit catalytique</h2>
+          <span class="panel-meta">t = <span id="reactTime">0,0</span> s</span>
+        </div>
+        <div class="panel-body">
+          <canvas id="reactorCanvas" style="width:100%;height:340px;display:block;background:var(--panel-2);border-radius:8px;border:1px solid var(--border);"></canvas>
+          <div class="grid grid-4 mt-12">
+            <div class="gauge"><div class="gauge-label">Température</div><div class="gauge-value" id="gaugeT">25 °C</div><div class="gauge-bar"><div class="gauge-fill" id="gaugeTBar" style="width:0%"></div></div></div>
+            <div class="gauge"><div class="gauge-label">Pression</div><div class="gauge-value" id="gaugeP">1,0 bar</div><div class="gauge-bar"><div class="gauge-fill" id="gaugePBar" style="width:0%"></div></div></div>
+            <div class="gauge"><div class="gauge-label">Conversion</div><div class="gauge-value" id="gaugeC">0 %</div><div class="gauge-bar"><div class="gauge-fill green" id="gaugeCBar" style="width:0%"></div></div></div>
+            <div class="gauge"><div class="gauge-label">H₂O produite</div><div class="gauge-value" id="gaugeW">0 g</div><div class="gauge-bar"><div class="gauge-fill green" id="gaugeWBar" style="width:0%"></div></div></div>
+          </div>
+          <div class="alert info mt-12">
+            <span class="alert-icon">ℹ️</span>
+            <div>Les particules bleues (H₂) et violettes (O₂) entrent à gauche. La zone orange représente le catalyseur. Les particules vertes (H₂O) sortent à droite après conversion.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- THERMO -->
+    <section class="page" id="page-thermo">
+      <div class="page-header">
+        <div>
+          <h1>Thermodynamique & dimensionnement</h1>
+          <p>Équilibre, cinétique et dimensionnement du réacteur catalytique</p>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="panel">
+          <div class="panel-header"><h2>Équilibre thermodynamique</h2><span class="panel-meta">T, P variables</span></div>
+          <div class="panel-body">
+            <div class="field">
+              <div class="field-header"><span class="field-label">Température</span><span class="field-value" id="tempVal">298 K</span></div>
+              <input type="range" id="temp" min="200" max="3000" value="298" step="10">
+            </div>
+            <div class="field">
+              <div class="field-header"><span class="field-label">Pression</span><span class="field-value" id="pressVal">1 bar</span></div>
+              <input type="range" id="press" min="1" max="200" value="1" step="1">
+            </div>
+            <div class="value-grid mt-12">
+              <div class="value-item"><div class="v-label">ΔG (T)</div><div class="v-value" id="dG">−237,2 kJ/mol</div></div>
+              <div class="value-item"><div class="v-label">K<sub>eq</sub></div><div class="v-value" id="Keq">3,2 × 10⁴¹</div></div>
+              <div class="value-item"><div class="v-label">Conversion</div><div class="v-value green" id="convEq">≈ 100 %</div></div>
+              <div class="value-item"><div class="v-label">ΔH (T)</div><div class="v-value" id="dH">−285,8 kJ/mol</div></div>
+            </div>
+            <div class="chart-wrap mt-12" style="height:180px"><canvas id="chartKeq"></canvas></div>
+            <div class="chart-legend">
+              <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--fr-blue)"></div>log₁₀ K<sub>eq</sub></div>
+              <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--fr-red)"></div>T opérationnelle</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><h2>Dimensionnement réacteur</h2><span class="panel-meta">lit fixe</span></div>
+          <div class="panel-body">
+            <div class="field">
+              <div class="field-header"><span class="field-label">Production cible</span><span class="field-value" id="prodVal">100 kg/h</span></div>
+              <input type="range" id="prod" min="1" max="1000" value="100" step="1">
+            </div>
+            <div class="field">
+              <div class="field-header"><span class="field-label">GHSV</span><span class="field-value" id="ghsvVal">5 000 h⁻¹</span></div>
+              <input type="range" id="ghsv" min="500" max="20000" value="5000" step="100">
+            </div>
+            <div class="field">
+              <span class="field-label" style="display:block;margin-bottom:6px">Catalyseur</span>
+              <select id="catalyst">
+                <option value="pd">Pd/Al₂O₃ (0,5 % Pd)</option>
+                <option value="pt">Pt/Al₂O₃ (1 % Pt)</option>
+                <option value="ni">Ni/Al₂O₃ (15 % Ni)</option>
+                <option value="pdpt">Pd-Pt/TiO₂ (0,3+0,3 %)</option>
+              </select>
+            </div>
+            <div class="value-grid mt-12">
+              <div class="value-item"><div class="v-label">Débit H₂</div><div class="v-value" id="nH2">15,4 mol/h</div></div>
+              <div class="value-item"><div class="v-label">Débit O₂</div><div class="v-value" id="nO2">7,7 mol/h</div></div>
+              <div class="value-item"><div class="v-label">Volume réacteur</div><div class="v-value" id="volReac">0,12 L</div></div>
+              <div class="value-item"><div class="v-label">Masse catalyseur</div><div class="v-value" id="masseCat">85 g</div></div>
+            </div>
+            <table class="table mt-12">
+              <thead><tr><th>Paramètre</th><th class="num">Valeur</th><th>Unité</th></tr></thead>
+              <tbody>
+                <tr><td>T° lit</td><td class="num accent" id="tLit">250</td><td>°C</td></tr>
+                <tr><td>Pression</td><td class="num accent" id="pLit">10</td><td>bar</td></tr>
+                <tr><td>Conversion</td><td class="num text-green">&gt; 99,9</td><td>%</td></tr>
+                <tr><td>Durée de vie cat.</td><td class="num" id="dureeVie">5</td><td>ans</td></tr>
+                <tr><td>Perte de charge</td><td class="num text-yellow" id="dp">0,30</td><td>bar</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ECONOMY -->
+    <section class="page" id="page-economy">
+      <div class="page-header">
+        <div>
+          <h1>Analyse économique</h1>
+          <p>OPEX, CAPEX et sensibilité · base 1 kg H₂O produite</p>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="panel">
+          <div class="panel-header"><h2>Paramètres économiques</h2><span class="panel-meta">€/kg</span></div>
+          <div class="panel-body">
+            <div class="field">
+              <div class="field-header"><span class="field-label">Prix H₂</span><span class="field-value" id="prixH2Val">4,00 €/kg</span></div>
+              <input type="range" id="prixH2" min="1" max="10" value="4" step="0.1">
+            </div>
+            <div class="field">
+              <div class="field-header"><span class="field-label">Prix O₂</span><span class="field-value" id="prixO2Val">0,20 €/kg</span></div>
+              <input type="range" id="prixO2" min="0.05" max="0.50" value="0.20" step="0.01">
+            </div>
+            <div class="field">
+              <div class="field-header"><span class="field-label">Prix électricité</span><span class="field-value" id="prixElecVal">0,15 €/kWh</span></div>
+              <input type="range" id="prixElec" min="0.05" max="0.40" value="0.15" step="0.01">
+            </div>
+            <div class="field">
+              <div class="field-header"><span class="field-label">Capacité usine</span><span class="field-value" id="capVal">10 000 t/an</span></div>
+              <input type="range" id="cap" min="100" max="100000" value="10000" step="100">
+            </div>
+            <div class="value-grid mt-12">
+              <div class="value-item"><div class="v-label">Coût réactifs</div><div class="v-value" id="coutReact">0,62 €/kg</div></div>
+              <div class="value-item"><div class="v-label">Coût énergie</div><div class="v-value" id="coutElec">0,04 €/kg</div></div>
+              <div class="value-item"><div class="v-label">OPEX total</div><div class="v-value yellow" id="opex">0,78 €/kg</div></div>
+              <div class="value-item"><div class="v-label">CAPEX estimé</div><div class="v-value" id="capex">2,4 M€</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><h2>Décomposition des coûts</h2><span class="panel-meta">€/kg H₂O</span></div>
+          <div class="panel-body">
+            <div class="chart-wrap" style="height:220px"><canvas id="chartCout"></canvas></div>
+            <div class="chart-legend mt-12">
+              <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--fr-blue)"></div>H₂</div>
+              <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--purple)"></div>O₂</div>
+              <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--green)"></div>Énergie</div>
+              <div class="chart-legend-item"><div class="chart-legend-dot" style="background:var(--fr-red)"></div>CAPEX/amort.</div>
+            </div>
+            <div class="alert warn mt-12">
+              <span class="alert-icon">⚠️</span>
+              <div>Pour 1 kg H₂O : 0,111 kg H₂ + 0,889 kg O₂. Le coût réactifs domine. La voie H₂ vert reste 10–50× plus chère que l'eau potable conventionnelle.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAFETY -->
+    <section class="page" id="page-safety">
+      <div class="page-header">
+        <div>
+          <h1>Sécurité & analyse HAZOP</h1>
+          <p>Propriétés H₂, nœuds critiques et simulateur de fuite</p>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="panel">
+          <div class="panel-header"><h2>Propriétés de sécurité H₂</h2><span class="panel-meta">survolez les lignes</span></div>
+          <div class="panel-body flush">
+            <table class="table">
+              <thead><tr><th>Paramètre</th><th class="num">Valeur</th><th>Niveau</th></tr></thead>
+              <tbody>
+                <tr data-tooltip="Limite Inférieure d'Explosivité — en dessous, mélange trop pauvre en H₂"><td>LIE H₂ / air</td><td class="num mono">4 % vol.</td><td><span class="tag red">Explosif</span></td></tr>
+                <tr data-tooltip="Limite Supérieure d'Explosivité — au-dessus, mélange trop riche en H₂"><td>LSE H₂ / air</td><td class="num mono">75 % vol.</td><td><span class="tag red">Explosif</span></td></tr>
+                <tr data-tooltip="Dans l'oxygène pur, la plage explosive est plus large"><td>LIE H₂ / O₂ pur</td><td class="num mono">4,5 % vol.</td><td><span class="tag red">Critique</span></td></tr>
+                <tr data-tooltip="Avec O₂ pur, presque tout mélange est explosif"><td>LSE H₂ / O₂ pur</td><td class="num mono">94 % vol.</td><td><span class="tag red">Critique</span></td></tr>
+                <tr data-tooltip="Une simple étincelle statique suffit à enflammer H₂"><td>Énergie min. inflammation</td><td class="num mono">0,017 mJ</td><td><span class="tag yellow">Très faible</span></td></tr>
+                <tr data-tooltip="Température d'auto-inflammation spontanée"><td>Temp. auto-inflammation</td><td class="num mono">585 °C</td><td><span class="tag yellow">Élevée</span></td></tr>
+                <tr data-tooltip="La flamme H₂ se propage très vite"><td>Vitesse flamme laminaire</td><td class="num mono">2,9 m/s</td><td><span class="tag red">Très rapide</span></td></tr>
+                <tr data-tooltip="Plage de détonation : onde de choc supersonique"><td>Détonation H₂/O₂</td><td class="num mono">18–59 %</td><td><span class="tag red">Détonant</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><h2>Simulateur de fuite H₂</h2><span class="panel-meta" id="leakStatus">Système nominal</span></div>
+          <div class="panel-body">
+            <div class="field">
+              <div class="field-header"><span class="field-label">Taux de fuite</span><span class="field-value" id="leakVal">0,0 % vol.</span></div>
+              <input type="range" id="leak" min="0" max="8" value="0" step="0.1">
+            </div>
+            <div class="grid grid-2 mt-8">
+              <div class="gauge">
+                <div class="gauge-label">Concentration</div>
+                <div class="gauge-value" id="leakConc">0,0 %</div>
+                <div class="gauge-bar"><div class="gauge-fill" id="leakBar" style="width:0%"></div></div>
+              </div>
+              <div class="gauge">
+                <div class="gauge-label">Seuil LIE</div>
+                <div class="gauge-value text-yellow">4,0 %</div>
+                <div class="gauge-bar"><div class="gauge-fill yellow" style="width:50%"></div></div>
+              </div>
+            </div>
+            <div class="alert info" id="leakNote">
+              <span class="alert-icon">ℹ️</span>
+              <div>Faites glisser pour simuler une fuite. Alerte à 10 % LIE (0,4 %), alarme à 25 % LIE (1 %), zone explosive à 4 %.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel mt-16">
+        <div class="panel-header"><h2>Analyse HAZOP</h2><span class="panel-meta">5 nœuds · cliquez pour détails</span></div>
+        <div class="panel-body flush">
+          <table class="table">
+            <thead><tr><th>Nœud</th><th>Déviation</th><th>Cause</th><th>Conséquence</th><th>Barrière</th></tr></thead>
+            <tbody>
+              <tr data-modal="hazop1" style="cursor:pointer"><td class="mono">Alim. H₂</td><td>Pression haute</td><td>Défaut détendeur</td><td>Rupture ligne</td><td><span class="tag blue">PSV + vanne</span></td></tr>
+              <tr data-modal="hazop2" style="cursor:pointer"><td class="mono">Alim. O₂</td><td>Débit excessif</td><td>Vanne bloquée</td><td>Mélange riche O₂</td><td><span class="tag blue">Flowmeter</span></td></tr>
+              <tr data-modal="hazop3" style="cursor:pointer"><td class="mono">Réacteur</td><td>T° haute</td><td>Emballement</td><td>Frittage catalyseur</td><td><span class="tag blue">Refroidissement</span></td></tr>
+              <tr data-modal="hazop4" style="cursor:pointer"><td class="mono">Ligne H₂</td><td>Fuite</td><td>Joint défaillant</td><td>Atmosphère explosive</td><td><span class="tag blue">Détecteurs H₂</span></td></tr>
+              <tr data-modal="hazop5" style="cursor:pointer"><td class="mono">Condenseur</td><td>Pression haute</td><td>Colmatage</td><td>Rupture, rejet vapeur</td><td><span class="tag blue">Bypass + PSV</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- SPECS -->
+    <section class="page" id="page-specs">
+      <div class="page-header">
+        <div>
+          <h1>Spécifications techniques</h1>
+          <p>Catalyseurs, qualité eau et données de référence</p>
+        </div>
+      </div>
+
+      <div class="grid grid-2">
+        <div class="panel">
+          <div class="panel-header"><h2>Catalyseurs de recombinaison</h2><span class="panel-meta">Pd, Pt, Ni</span></div>
+          <div class="panel-body flush">
+            <table class="table">
+              <thead><tr><th>Catalyseur</th><th class="num">Charge</th><th class="num">T op.</th><th>Activité</th><th>Coût</th></tr></thead>
+              <tbody>
+                <tr><td>Pd/Al₂O₃</td><td class="num mono">0,5 %</td><td class="num mono">20–150 °C</td><td><span class="tag green">Très haute</span></td><td><span class="tag yellow">Élevé</span></td></tr>
+                <tr><td>Pt/Al₂O₃</td><td class="num mono">1,0 %</td><td class="num mono">20–200 °C</td><td><span class="tag green">Haute</span></td><td><span class="tag yellow">Élevé</span></td></tr>
+                <tr><td>Pd-Pt/TiO₂</td><td class="num mono">0,3+0,3 %</td><td class="num mono">20–250 °C</td><td><span class="tag green">Très haute</span></td><td><span class="tag red">Très élevé</span></td></tr>
+                <tr><td>Ni/Al₂O₃</td><td class="num mono">15 %</td><td class="num mono">300–500 °C</td><td><span class="tag yellow">Moyenne</span></td><td><span class="tag green">Faible</span></td></tr>
+                <tr><td>Pt/C</td><td class="num mono">5 %</td><td class="num mono">20–100 °C</td><td><span class="tag green">Haute</span></td><td><span class="tag yellow">Élevé</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><h2>Spécifications eau ultra-pure</h2><span class="panel-meta">SEMI C12 / ASTM D1193 Type I</span></div>
+          <div class="panel-body flush">
+            <table class="table">
+              <thead><tr><th>Paramètre</th><th class="num">Cible</th><th>Unité</th></tr></thead>
+              <tbody>
+                <tr><td>Résistivité</td><td class="num accent">18,2</td><td>MΩ·cm à 25 °C</td></tr>
+                <tr><td>TOC</td><td class="num accent">&lt; 5</td><td>ppb</td></tr>
+                <tr><td>O₂ dissous</td><td class="num accent">&lt; 10</td><td>ppb</td></tr>
+                <tr><td>Métaux (total)</td><td class="num accent">&lt; 1</td><td>ppt</td></tr>
+                <tr><td>SiO₂</td><td class="num accent">&lt; 1</td><td>ppb</td></tr>
+                <tr><td>Particules &gt; 0,05 µm</td><td class="num accent">&lt; 100</td><td>/mL</td></tr>
+                <tr><td>Bactéries</td><td class="num accent">&lt; 1</td><td>CFU/mL</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel mt-16">
+        <div class="panel-header"><h2>Comparaison des technologies</h2><span class="panel-meta">3 voies industrielles</span></div>
+        <div class="panel-body flush">
+          <table class="table">
+            <thead><tr><th>Critère</th><th class="num">Combustion</th><th class="num">PEM (pile)</th><th class="num">Catalytique</th></tr></thead>
+            <tbody>
+              <tr><td>Température</td><td class="num mono">1 500–3 000 °C</td><td class="num mono">60–80 °C</td><td class="num mono">200–500 °C</td></tr>
+              <tr><td>Rendement</td><td class="num mono">~ 85 %</td><td class="num mono">50–60 %</td><td class="num mono">~ 95 %</td></tr>
+              <tr><td>Production H₂O</td><td class="num">Vapeur</td><td class="num">Eau liquide</td><td class="num">Vapeur/eau</td></tr>
+              <tr><td>Cogénération élec.</td><td class="num text-red">Non</td><td class="num text-green">Oui</td><td class="num text-red">Non</td></tr>
+              <tr><td>CAPEX</td><td class="num text-yellow">Moyen</td><td class="num text-red">Élevé</td><td class="num text-green">Faible</td></tr>
+              <tr><td>OPEX</td><td class="num text-yellow">Moyen</td><td class="num text-red">Élevé</td><td class="num text-green">Faible</td></tr>
+              <tr><td>Pureté H₂O</td><td class="num">Bonne</td><td class="num text-green">Excellente</td><td class="num text-green">Excellente</td></tr>
+              <tr><td>Maturité</td><td class="num text-green">Industrielle</td><td class="num text-yellow">En cours</td><td class="num text-green">Industrielle</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOCS -->
+    <section class="page" id="page-docs">
+      <div class="page-header">
+        <div>
+          <h1>Documentation technique</h1>
+          <p>Références, formules et hypothèses du modèle</p>
+        </div>
+      </div>
+
+      <div class="grid grid-3">
+        <div class="panel">
+          <div class="panel-header"><h2>Thermodynamique</h2></div>
+          <div class="panel-body flush">
+            <table class="table"><tbody>
+              <tr><td>ΔH°f H₂O(g)</td><td class="num mono accent">−241,8 kJ/mol</td></tr>
+              <tr><td>ΔH°f H₂O(l)</td><td class="num mono accent">−285,8 kJ/mol</td></tr>
+              <tr><td>ΔG°f H₂O(g)</td><td class="num mono accent">−228,6 kJ/mol</td></tr>
+              <tr><td>ΔG°f H₂O(l)</td><td class="num mono accent">−237,1 kJ/mol</td></tr>
+              <tr><td>S° H₂O(g)</td><td class="num mono">188,7 J/mol·K</td></tr>
+              <tr><td>S° H₂</td><td class="num mono">130,7 J/mol·K</td></tr>
+              <tr><td>S° O₂</td><td class="num mono">205,1 J/mol·K</td></tr>
+            </tbody></table>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><h2>Cinétique & réacteur</h2></div>
+          <div class="panel-body flush">
+            <table class="table"><tbody>
+              <tr><td>Loi de vitesse</td><td class="num mono">r = k·[H₂]·[O₂]⁰·⁵</td></tr>
+              <tr><td>Énergie activation</td><td class="num mono">40–80 kJ/mol</td></tr>
+              <tr><td>GHSV typique</td><td class="num mono">1 000–10 000 h⁻¹</td></tr>
+              <tr><td>Conversion cible</td><td class="num mono">&gt; 99,9 %</td></tr>
+              <tr><td>Régime</td><td class="num mono">Lit fixe adiabatique</td></tr>
+              <tr><td>Refroidissement</td><td class="num mono">Quench / multitub.</td></tr>
+            </tbody></table>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><h2>Normes & réglementation</h2></div>
+          <div class="panel-body flush">
+            <table class="table"><tbody>
+              <tr><td>ATEX</td><td class="num mono">Zone 1/2 · IIC T1</td></tr>
+              <tr><td>Détection H₂</td><td class="num mono">10 % LIE · 2oo3</td></tr>
+              <tr><td>PSV réacteur</td><td class="num mono">10 % surpression</td></tr>
+              <tr><td>Matériaux</td><td class="num mono">316L, Inconel 625</td></tr>
+              <tr><td>Norme pile</td><td class="num mono">ISO 22734, IEC 62282</td></tr>
+              <tr><td>Eau ultra-pure</td><td class="num mono">ASTM D1193 Type I</td></tr>
+            </tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel mt-16">
+        <div class="panel-header"><h2>Hypothèses du modèle</h2></div>
+        <div class="panel-body">
+          <div class="alert info">
+            <span class="alert-icon">ℹ️</span>
+            <div>
+              <strong>Thermodynamique :</strong> ΔH et ΔS considérés constants sur la plage 200–3000 K. Équilibre calculé par K<sub>eq</sub> = exp(−ΔG/RT).<br>
+              <strong>Cinétique :</strong> modèle simplifié, ordre partiel en O₂. Pas de limitation par transfert de matière.<br>
+              <strong>Dimensionnement :</strong> basé sur GHSV et densité de lit de 800 g/L. Facteur catalyseur appliqué selon le type.<br>
+              <strong>Économie :</strong> CAPEX par loi de puissance (exposant 0,6). Amortissement sur 10 ans.<br>
+              <strong>Limites :</strong> modèle pédagogique. Pour un projet réel, utiliser Aspen Plus / HYSYS avec données cinétiques validées.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- STATUS BAR -->
+  <div class="statusbar">
+    <div class="sb-item"><div class="sb-dot green"></div>Connecté</div>
+    <div class="sb-item">Modèle : H₂O-Synth v2.4</div>
+    <div class="sb-item">Unité : SI</div>
+    <div class="sb-spacer"></div>
+    <div class="sb-item" id="sbClock">--:--:--</div>
+    <div class="sb-item">République Française · Ingénierie</div>
+  </div>
+
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">Détails</h3>
+      <button class="modal-close" id="modalClose">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+/* ============================================================
+   CORE
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const R = 8.314;
+const M_H2 = 2.016, M_O2 = 31.998, M_H2O = 18.015;
+const dHf = -285800, dSf = -163.2;
+
+const fmt = (x, d = 2) => isFinite(x)
+  ? x.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d })
+  : '—';
+
+const fmtSci = x => {
+  if (x === 0) return '0';
+  const exp = Math.floor(Math.log10(Math.abs(x)));
+  const mant = x / Math.pow(10, exp);
+  return `${mant.toFixed(2)} × 10<sup>${exp}</sup>`;
+};
+
+/* ============================================================
+   TOASTS
+   ============================================================ */
+function toast(title, msg, type = 'info', duration = 3000) {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<div><div class="toast-title">${title}</div><div class="toast-msg">${msg}</div></div>`;
+  $('toasts').appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity .3s, transform .3s';
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(20px)';
+    setTimeout(() => el.remove(), 300);
+  }, duration);
+}
+
+/* ============================================================
+   NAVIGATION
+   ============================================================ */
+const pageTitles = {
+  overview: "Vue d'ensemble", builder: "Constructeur", reactor: "Réacteur",
+  thermo: "Thermodynamique", economy: "Économie", safety: "Sécurité HAZOP",
+  specs: "Spécifications", docs: "Documentation"
+};
+
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const page = item.dataset.page;
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    item.classList.add('active');
+    $('page-' + page).classList.add('active');
+    $('crumbPage').textContent = pageTitles[page] || page;
+    setTimeout(() => {
+      if (page === 'thermo') { calcThermo(); calcReactor(); }
+      if (page === 'economy') calcEco();
+      if (page === 'builder') { resizeMol(); drawMol(); }
+      if (page === 'reactor') resizeReactor();
+    }, 60);
+  });
+});
+
+/* ============================================================
+   TOOLTIP
+   ============================================================ */
+const tooltip = $('tooltip');
+document.addEventListener('mouseover', e => {
+  const el = e.target.closest('[data-tooltip]');
+  if (!el) return;
+  tooltip.innerHTML = el.dataset.tooltip;
+  tooltip.classList.add('visible');
+});
+document.addEventListener('mousemove', e => {
+  if (!tooltip.classList.contains('visible')) return;
+  const w = tooltip.offsetWidth, h = tooltip.offsetHeight;
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + w > window.innerWidth - 8) x = e.clientX - w - 14;
+  if (y + h > window.innerHeight - 8) y = e.clientY - h - 14;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+});
+document.addEventListener('mouseout', e => {
+  if (!e.target.closest('[data-tooltip]')) return;
+  tooltip.classList.remove('visible');
+});
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+const modalData = {
+  'app-industry': { title: '🏭 Applications industrielles', body: `<p>La synthèse H₂ + O₂ est utilisée pour :</p><ul><li>Production de vapeur haute pression</li><li>Génération d'électricité par piles à combustible</li><li>Eau ultra-pure pour semi-conducteurs et pharma</li><li>Désoxygénation des circuits de refroidissement</li><li>Propulsion spatiale (moteurs cryogéniques)</li></ul>` },
+  'app-demo': { title: '🔬 Démonstration particulier', body: `<p>Un kit PEM + électrolyseur permet de visualiser la synthèse :</p><ul><li>Électrolyse : H₂O → H₂ + ½O₂</li><li>Pile PEM : H₂ + ½O₂ → H₂O</li><li>Bilan net : on récupère au mieux l'eau de départ</li></ul><p><strong>⚠️ Ne jamais stocker H₂ et O₂ ensemble.</strong></p>` },
+  'app-ultrapure': { title: '💧 Eau ultra-pure', body: `<p>La recombinaison catalytique H₂ + O₂ sur Pd/Pt permet d'obtenir une eau de résistivité 18,2 MΩ·cm.</p><ul><li>TOC &lt; 5 ppb</li><li>O₂ dissous &lt; 10 ppb</li><li>Métaux &lt; 1 ppt</li><li>Particules &lt; 100/mL</li></ul><p>Normes : SEMI C12, ASTM D1193 Type I.</p>` },
+  'app-decarb': { title: '🌱 Décarbonation', body: `<p>Les chaudières H₂/O₂ remplacent les combustibles fossiles :</p><ul><li>Pas de CO₂ émis (seulement H₂O)</li><li>Température de flamme très élevée</li><li>Compatible avec H₂ vert</li></ul><p><strong>Défi :</strong> produire H₂ vert à coût compétitif et sécuriser les installations.</p>` },
+  hazop1: { title: 'HAZOP · Alim. H₂ : pression haute', body: `<p><strong>Déviation :</strong> Pression supérieure à la consigne.</p><p><strong>Cause :</strong> Défaut du détendeur, blocage vanne aval.</p><p><strong>Conséquence :</strong> Rupture de ligne, fuite H₂, explosion.</p><h4>Barrières</h4><ul><li>PSV tarée à 10 % surpression</li><li>Vanne d'arrêt automatique (ESD)</li><li>Détecteurs de pression redondants</li></ul>` },
+  hazop2: { title: 'HAZOP · Alim. O₂ : débit excessif', body: `<p><strong>Déviation :</strong> Débit O₂ supérieur à la consigne.</p><p><strong>Cause :</strong> Vanne bloquée ouverte.</p><p><strong>Conséquence :</strong> Mélange riche en O₂, risque d'emballement.</p><h4>Barrières</h4><ul><li>Débitmètre massique + régulation</li><li>Shut-off automatique si &gt; 110 %</li><li>Analyseur O₂ en ligne</li></ul>` },
+  hazop3: { title: 'HAZOP · Réacteur : température haute', body: `<p><strong>Déviation :</strong> Température du lit excessive.</p><p><strong>Cause :</strong> Emballement thermique, perte de refroidissement.</p><p><strong>Conséquence :</strong> Frittage du catalyseur, surpression.</p><h4>Barrières</h4><ul><li>Refroidissement multitubulaire</li><li>Quench (injection d'eau froide)</li><li>PSV + alarme température</li></ul>` },
+  hazop4: { title: 'HAZOP · Ligne H₂ : fuite', body: `<p><strong>Déviation :</strong> Fuite de H₂ dans l'atmosphère.</p><p><strong>Cause :</strong> Joint défaillant, corrosion.</p><p><strong>Conséquence :</strong> Atmosphère explosive.</p><h4>Barrières</h4><ul><li>Détecteurs H₂ (2oo3) à 10 % LIE</li><li>Ventilation forcée</li><li>Matériel Ex, mise à la terre</li></ul>` },
+  hazop5: { title: 'HAZOP · Condenseur : pression haute', body: `<p><strong>Déviation :</strong> Pression côté vapeur excessive.</p><p><strong>Cause :</strong> Colmatage, perte de vide.</p><p><strong>Conséquence :</strong> Rupture, rejet de vapeur.</p><h4>Barrières</h4><ul><li>Bypass automatique</li><li>PSV</li><li>Nettoyage périodique</li></ul>` }
+};
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-modal]');
+  if (!el) return;
+  const data = modalData[el.dataset.modal];
+  if (!data) return;
+  $('modalTitle').textContent = data.title;
+  $('modalBody').innerHTML = data.body;
+  $('modalOverlay').classList.add('visible');
+});
+$('modalClose').addEventListener('click', () => $('modalOverlay').classList.remove('visible'));
+$('modalOverlay').addEventListener('click', e => {
+  if (e.target === $('modalOverlay')) $('modalOverlay').classList.remove('visible');
+});
+
+/* ============================================================
+   MOLECULE BUILDER
+   ============================================================ */
+const molCanvas = $('molCanvas');
+const molCtx = molCanvas.getContext('2d');
+let molecules = [];
+let molAnimId = null;
+let reactFlash = 0;
+
+function resizeMol() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = molCanvas.getBoundingClientRect();
+  if (rect.width === 0) return;
+  molCanvas.width = rect.width * dpr;
+  molCanvas.height = rect.height * dpr;
+  molCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function addMolecule(type) {
+  const rect = molCanvas.getBoundingClientRect();
+  const r = type === 'H2O' ? 18 : (type === 'O2' ? 14 : 11);
+  molecules.push({
+    type,
+    x: Math.random() * (rect.width - 100) + 50,
+    y: Math.random() * (rect.height - 100) + 50,
+    vx: (Math.random() - 0.5) * 0.8,
+    vy: (Math.random() - 0.5) * 0.8,
+    r,
+    birth: performance.now()
+  });
+  updateMolCounts();
+  if (!molAnimId) molAnimId = requestAnimationFrame(animateMol);
+}
+
+function updateMolCounts() {
+  $('countH2').textContent = molecules.filter(m => m.type === 'H2').length;
+  $('countO2').textContent = molecules.filter(m => m.type === 'O2').length;
+  $('countH2O').textContent = molecules.filter(m => m.type === 'H2O').length;
+}
+
+function reactMolecules() {
+  const h2 = molecules.filter(m => m.type === 'H2');
+  const o2 = molecules.filter(m => m.type === 'O2');
+  const possible = Math.min(Math.floor(h2.length / 2), o2.length);
+
+  if (possible === 0) {
+    toast('Réaction impossible', 'Il faut au moins 2 H₂ et 1 O₂', 'warn');
+    return;
+  }
+
+  const toRemove = new Set();
+  const newH2O = [];
+  for (let i = 0; i < possible; i++) {
+    const a = h2[i * 2], b = h2[i * 2 + 1], c = o2[i];
+    toRemove.add(a); toRemove.add(b); toRemove.add(c);
+    const mx = (a.x + b.x + c.x) / 3;
+    const my = (a.y + b.y + c.y) / 3;
+    for (let k = 0; k < 2; k++) {
+      newH2O.push({
+        type: 'H2O',
+        x: mx + (Math.random() - 0.5) * 50,
+        y: my + (Math.random() - 0.5) * 50,
+        vx: (Math.random() - 0.5) * 1.0,
+        vy: (Math.random() - 0.5) * 1.0,
+        r: 18,
+        birth: performance.now()
+      });
+    }
+  }
+  molecules = molecules.filter(m => !toRemove.has(m));
+  molecules.push(...newH2O);
+  reactFlash = performance.now();
+
+  const h2Restant = h2.length - possible * 2;
+  const o2Restant = o2.length - possible;
+  let lim = '—', exces = '—';
+  if (h2Restant === 0 && o2Restant > 0) { lim = 'H₂'; exces = o2Restant + ' O₂'; }
+  else if (o2Restant === 0 && h2Restant > 0) { lim = 'O₂'; exces = h2Restant + ' H₂'; }
+  else if (h2Restant === 0 && o2Restant === 0) { lim = 'Stœchiométrique'; exces = 'Aucun'; }
+  else { lim = 'H₂'; exces = h2Restant + ' H₂ · ' + o2Restant + ' O₂'; }
+
+  $('molLimitant').textContent = lim;
+  $('molProduit').textContent = newH2O.length;
+  $('molExces').textContent = exces;
+  updateMolCounts();
+  toast('Réaction effectuée', `${possible} O₂ consommé(s) → ${newH2O.length} H₂O produite(s)`, 'success');
+}
+
+function drawMol() {
+  const rect = molCanvas.getBoundingClientRect();
+  if (rect.width === 0) return;
+  const W = rect.width, H = rect.height;
+  molCtx.clearRect(0, 0, W, H);
+
+  molCtx.strokeStyle = 'rgba(214,224,236,.6)';
+  molCtx.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) { molCtx.beginPath(); molCtx.moveTo(x, 0); molCtx.lineTo(x, H); molCtx.stroke(); }
+  for (let y = 0; y < H; y += 40) { molCtx.beginPath(); molCtx.moveTo(0, y); molCtx.lineTo(W, y); molCtx.stroke(); }
+
+  if (performance.now() - reactFlash < 400) {
+    const alpha = 1 - (performance.now() - reactFlash) / 400;
+    molCtx.fillStyle = `rgba(0,85,164,${alpha * 0.12})`;
+    molCtx.fillRect(0, 0, W, H);
+  }
+
+  const now = performance.now();
+  molecules.forEach(m => {
+    const colors = {
+      H2: { fill: '#0055A4', glow: 'rgba(0,85,164,.5)', label: 'H₂', text: '#FFFFFF' },
+      O2: { fill: '#6B4FBB', glow: 'rgba(107,79,187,.5)', label: 'O₂', text: '#FFFFFF' },
+      H2O: { fill: '#1B7F4B', glow: 'rgba(27,127,75,.5)', label: 'H₂O', text: '#FFFFFF' }
+    };
+    const c = colors[m.type];
+    const age = (now - m.birth) / 1000;
+    const scale = Math.min(1, age * 4);
+
+    molCtx.save();
+    molCtx.shadowColor = c.glow;
+    molCtx.shadowBlur = 16 * scale;
+    molCtx.fillStyle = c.fill;
+    molCtx.beginPath();
+    molCtx.arc(m.x, m.y, m.r * scale, 0, Math.PI * 2);
+    molCtx.fill();
+    molCtx.restore();
+
+    if (scale > 0.5) {
+      molCtx.fillStyle = c.text;
+      molCtx.font = `700 ${Math.max(8, m.r * 0.65)}px ${getComputedStyle(document.body).getPropertyValue('--mono')}`;
+      molCtx.textAlign = 'center';
+      molCtx.textBaseline = 'middle';
+      molCtx.fillText(c.label, m.x, m.y + 1);
+    }
+  });
+}
+
+function animateMol() {
+  const rect = molCanvas.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+  molecules.forEach(m => {
+    m.x += m.vx; m.y += m.vy;
+    if (m.x < m.r || m.x > W - m.r) { m.vx *= -1; m.x = Math.max(m.r, Math.min(W - m.r, m.x)); }
+    if (m.y < m.r || m.y > H - m.r) { m.vy *= -1; m.y = Math.max(m.r, Math.min(H - m.r, m.y)); }
+  });
+  drawMol();
+  molAnimId = requestAnimationFrame(animateMol);
+}
+
+$('addH2').addEventListener('click', () => addMolecule('H2'));
+$('addO2').addEventListener('click', () => addMolecule('O2'));
+$('reactBtn').addEventListener('click', reactMolecules);
+$('resetMol').addEventListener('click', () => {
+  molecules = [];
+  updateMolCounts();
+  $('molLimitant').textContent = '—';
+  $('molProduit').textContent = '0';
+  $('molExces').textContent = '—';
+  drawMol();
+  toast('Espace réinitialisé', 'Toutes les molécules ont été supprimées', 'info', 1800);
+});
+
+/* ============================================================
+   REACTOR
+   ============================================================ */
+const reactorCanvas = $('reactorCanvas');
+const reactCtx = reactorCanvas.getContext('2d');
+let reactorParticles = [];
+let reactorRunning = false;
+let reactorStartTime = 0;
+let reactorState = { T: 25, P: 1, conv: 0, water: 0 };
+
+function resizeReactor() {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = reactorCanvas.getBoundingClientRect();
+  if (rect.width === 0) return;
+  reactorCanvas.width = rect.width * dpr;
+  reactorCanvas.height = rect.height * dpr;
+  reactCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawReactor();
+}
+
+function drawReactor() {
+  const rect = reactorCanvas.getBoundingClientRect();
+  if (rect.width === 0) return;
+  const W = rect.width, H = rect.height;
+  reactCtx.clearRect(0, 0, W, H);
+
+  reactCtx.fillStyle = '#F7FAFD';
+  reactCtx.fillRect(0, 0, W, H);
+
+  const zoneY = H * 0.15;
+  const zoneH = H * 0.7;
+
+  reactCtx.fillStyle = 'rgba(0,85,164,.05)';
+  reactCtx.fillRect(0, zoneY, W * 0.15, zoneH);
+
+  const catX = W * 0.25, catW = W * 0.5;
+  const grad = reactCtx.createLinearGradient(catX, 0, catX + catW, 0);
+  grad.addColorStop(0, 'rgba(107,79,187,.10)');
+  grad.addColorStop(0.5, 'rgba(239,65,53,.15)');
+  grad.addColorStop(1, 'rgba(107,79,187,.10)');
+  reactCtx.fillStyle = grad;
+  reactCtx.fillRect(catX, zoneY, catW, zoneH);
+
+  reactCtx.fillStyle = 'rgba(27,127,75,.06)';
+  reactCtx.fillRect(W * 0.75, zoneY, W * 0.25, zoneH);
+
+  reactCtx.strokeStyle = '#B8CCE4';
+  reactCtx.lineWidth = 1.5;
+  reactCtx.strokeRect(W * 0.15, zoneY, W * 0.6, zoneH);
+
+  reactCtx.fillStyle = '#6B7F98';
+  reactCtx.font = `700 10px ${getComputedStyle(document.body).getPropertyValue('--mono')}`;
+  reactCtx.textAlign = 'center';
+  reactCtx.fillText('ENTRÉE H₂ + O₂', W * 0.075, zoneY - 8);
+  reactCtx.fillText('CATALYSEUR Pd/Al₂O₃', W * 0.5, zoneY - 8);
+  reactCtx.fillText('SORTIE H₂O', W * 0.875, zoneY - 8);
+
+  reactorParticles.forEach(p => {
+    reactCtx.save();
+    reactCtx.shadowColor = p.color + '99';
+    reactCtx.shadowBlur = 8;
+    reactCtx.fillStyle = p.color;
+    reactCtx.beginPath();
+    reactCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    reactCtx.fill();
+    reactCtx.restore();
+  });
+}
+
+function spawnParticle(type) {
+  const rect = reactorCanvas.getBoundingClientRect();
+  const zoneY = rect.height * 0.15;
+  const zoneH = rect.height * 0.7;
+  const colors = { H2: '#0055A4', O2: '#6B4FBB', H2O: '#1B7F4B' };
+  reactorParticles.push({
+    type,
+    x: -10,
+    y: zoneY + Math.random() * zoneH,
+    vx: 1.5 + Math.random() * 1.5,
+    vy: (Math.random() - 0.5) * 0.5,
+    r: type === 'H2O' ? 7 : 5,
+    color: colors[type]
+  });
+}
+
+function updateReactor(dt) {
+  const rect = reactorCanvas.getBoundingClientRect();
+  const W = rect.width;
+  const catX = W * 0.25, catEnd = W * 0.75;
+
+  if (Math.random() < 0.4) spawnParticle('H2');
+  if (Math.random() < 0.2) spawnParticle('O2');
+
+  for (let i = reactorParticles.length - 1; i >= 0; i--) {
+    const p = reactorParticles[i];
+    const inCat = p.x > catX && p.x < catEnd;
+    p.x += p.vx * (inCat ? 1.4 : 1) * dt * 60;
+    p.y += p.vy * dt * 60;
+    if (p.x > catEnd && p.type !== 'H2O' && Math.random() < 0.06) {
+      p.type = 'H2O'; p.color = '#1B7F4B'; p.r = 7;
+    }
+    if (p.x > W + 10) reactorParticles.splice(i, 1);
+  }
+
+  const t = (performance.now() - reactorStartTime) / 1000;
+  reactorState.T = Math.min(250, 25 + t * 30);
+  reactorState.P = Math.min(10, 1 + t * 1.2);
+  reactorState.conv = Math.min(99.9, t * 15);
+  reactorState.water = Math.min(1000, t * 80);
+
+  $('gaugeT').textContent = reactorState.T.toFixed(0) + ' °C';
+  $('gaugeTBar').style.width = Math.min(100, reactorState.T / 3) + '%';
+  $('gaugeP').textContent = reactorState.P.toFixed(1) + ' bar';
+  $('gaugePBar').style.width = (reactorState.P / 15 * 100) + '%';
+  $('gaugeC').textContent = reactorState.conv.toFixed(1) + ' %';
+  $('gaugeCBar').style.width = reactorState.conv + '%';
+  $('gaugeW').textContent = reactorState.water.toFixed(0) + ' g';
+  $('gaugeWBar').style.width = (reactorState.water / 1000 * 100) + '%';
+  $('reactTime').textContent = t.toFixed(1).replace('.', ',');
+}
+
+function reactorLoop() {
+  if (!reactorRunning) return;
+  const now = performance.now();
+  const dt = Math.min(0.05, (now - (reactorLoop.last || now)) / 1000);
+  reactorLoop.last = now;
+  updateReactor(dt);
+  drawReactor();
+  requestAnimationFrame(reactorLoop);
+}
+
+$('playReactor').addEventListener('click', () => {
+  reactorRunning = !reactorRunning;
+  $('playReactor').textContent = reactorRunning ? '⏸ Pause' : '▶ Démarrer';
+  if (reactorRunning) {
+    reactorStartTime = performance.now() - (reactorState.T - 25) / 30 * 1000;
+    reactorLoop.last = performance.now();
+    requestAnimationFrame(reactorLoop);
+    toast('Simulation démarrée', 'Le réacteur monte en température', 'success', 2000);
+  }
+});
+
+$('resetReactor').addEventListener('click', () => {
+  reactorRunning = false;
+  reactorParticles = [];
+  reactorState = { T: 25, P: 1, conv: 0, water: 0 };
+  reactorStartTime = 0;
+  $('playReactor').textContent = '▶ Démarrer';
+  $('gaugeT').textContent = '25 °C';
+  $('gaugeP').textContent = '1,0 bar';
+  $('gaugeC').textContent = '0 %';
+  $('gaugeW').textContent = '0 g';
+  ['gaugeTBar', 'gaugePBar', 'gaugeCBar', 'gaugeWBar'].forEach(id => $(id).style.width = '0%');
+  $('reactTime').textContent = '0,0';
+  drawReactor();
+});
+
+/* ============================================================
+   THERMO
+   ============================================================ */
+function calcThermo() {
+  const T = parseFloat($('temp').value);
+  const P = parseFloat($('press').value);
+  $('tempVal').textContent = T + ' K';
+  $('pressVal').textContent = P + ' bar';
+
+  const dG = dHf - T * dSf;
+  const Keq = Math.exp(-dG / (R * T));
+  $('dG').textContent = fmt(dG / 1000, 1) + ' kJ/mol';
+  $('Keq').innerHTML = fmtSci(Keq);
+  $('dH').textContent = fmt(dHf / 1000, 1) + ' kJ/mol';
+
+  let conv;
+  if (Keq > 1e10) conv = 100;
+  else if (Keq > 1) conv = 100 * (1 - 1 / Math.sqrt(Keq + 1));
+  else conv = 100 * Keq / (1 + Keq);
+  conv = Math.min(100, Math.max(0, conv));
+  $('convEq').textContent = conv > 99.9 ? '≈ 100 %' : fmt(conv, 1) + ' %';
+
+  drawKeqChart(T);
+}
+
+function drawKeqChart(Top) {
+  const c = $('chartKeq');
+  if (!c) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  if (rect.width === 0) return;
+  c.width = rect.width * dpr;
+  c.height = rect.height * dpr;
+  const ctx = c.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = rect.width, H = rect.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { l: 44, r: 12, t: 12, b: 24 };
+  const w = W - pad.l - pad.r;
+  const h = H - pad.t - pad.b;
+
+  ctx.strokeStyle = 'rgba(214,224,236,.8)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.t + h * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + w, y); ctx.stroke();
+  }
+
+  ctx.strokeStyle = '#B8CCE4';
+  ctx.beginPath();
+  ctx.moveTo(pad.l, pad.t);
+  ctx.lineTo(pad.l, pad.t + h);
+  ctx.lineTo(pad.l + w, pad.t + h);
+  ctx.stroke();
+
+  const Tmin = 200, Tmax = 3000;
+  const logMin = -20, logMax = 50;
+  const points = [];
+  for (let i = 0; i <= 120; i++) {
+    const T = Tmin + (Tmax - Tmin) * i / 120;
+    const dG = dHf - T * dSf;
+    const Keq = Math.exp(-dG / (R * T));
+    points.push({ T, logK: Math.log10(Math.max(Keq, 1e-30)) });
+  }
+
+  ctx.strokeStyle = '#0055A4';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  points.forEach((p, i) => {
+    const x = pad.l + w * (p.T - Tmin) / (Tmax - Tmin);
+    const y = pad.t + h * (1 - (p.logK - logMin) / (logMax - logMin));
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  const xOp = pad.l + w * (Top - Tmin) / (Tmax - Tmin);
+  ctx.strokeStyle = '#EF4135';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(xOp, pad.t); ctx.lineTo(xOp, pad.t + h); ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = '#EF4135';
+  ctx.beginPath();
+  ctx.arc(xOp, pad.t + h, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#6B7F98';
+  ctx.font = `10px ${getComputedStyle(document.body).getPropertyValue('--mono')}`;
+  ctx.textAlign = 'center';
+  ctx.fillText('200 K', pad.l, H - 6);
+  ctx.fillText('1500 K', pad.l + w / 2, H - 6);
+  ctx.fillText('3000 K', pad.l + w, H - 6);
+  ctx.textAlign = 'right';
+  ctx.fillText('10⁵⁰', pad.l - 6, pad.t + 10);
+  ctx.fillText('10¹⁵', pad.l - 6, pad.t + h * 0.25 + 4);
+  ctx.fillText('10⁰', pad.l - 6, pad.t + h / 2 + 3);
+  ctx.fillText('10⁻²⁰', pad.l - 6, pad.t + h);
+}
+
+$('temp').addEventListener('input', calcThermo);
+$('press').addEventListener('input', calcThermo);
+
+/* ============================================================
+   REACTOR SIZING
+   ============================================================ */
+const catData = {
+  pd:   { T: 250, duree: 5, facteur: 1.0 },
+  pt:   { T: 300, duree: 6, facteur: 1.2 },
+  ni:   { T: 450, duree: 3, facteur: 2.5 },
+  pdpt: { T: 220, duree: 7, facteur: 0.8 }
+};
+
+function calcReactor() {
+  const prod = parseFloat($('prod').value);
+  const ghsv = parseFloat($('ghsv').value);
+  const cat = $('catalyst').value;
+  const cd = catData[cat];
+
+  $('prodVal').textContent = prod + ' kg/h';
+  $('ghsvVal').textContent = ghsv.toLocaleString('fr-FR') + ' h⁻¹';
+
+  const nH2O = prod * 1000 / M_H2O;
+  const nH2 = nH2O;
+  const nO2 = nH2O / 2;
+
+  $('nH2').textContent = fmt(nH2, 1) + ' mol/h';
+  $('nO2').textContent = fmt(nO2, 1) + ' mol/h';
+
+  const debitGaz = (nH2 + nO2) * 22.4;
+  const volCat = debitGaz / ghsv;
+  const masseCat = volCat * 800 * cd.facteur;
+
+  $('volReac').textContent = fmt(volCat, 2) + ' L';
+  $('masseCat').textContent = fmt(masseCat / 1000, 2) + ' kg';
+  $('tLit').textContent = cd.T;
+  $('dureeVie').textContent = cd.duree;
+  $('dp').textContent = fmt(0.1 + volCat * 0.05, 2);
+  $('pLit').textContent = (10 + Math.log10(prod) * 2).toFixed(0);
+}
+
+$('prod').addEventListener('input', calcReactor);
+$('ghsv').addEventListener('input', calcReactor);
+$('catalyst').addEventListener('change', calcReactor);
+
+/* ============================================================
+   ECONOMY
+   ============================================================ */
+let ecoData = { cH2: 0, cO2: 0, cElec: 0, amort: 0 };
+
+function calcEco() {
+  const pH2 = parseFloat($('prixH2').value);
+  const pO2 = parseFloat($('prixO2').value);
+  const pElec = parseFloat($('prixElec').value);
+  const cap = parseFloat($('cap').value);
+
+  $('prixH2Val').textContent = fmt(pH2, 2) + ' €/kg';
+  $('prixO2Val').textContent = fmt(pO2, 2) + ' €/kg';
+  $('prixElecVal').textContent = fmt(pElec, 2) + ' €/kWh';
+  $('capVal').textContent = cap.toLocaleString('fr-FR') + ' t/an';
+
+  const cH2 = 0.111 * pH2;
+  const cO2 = 0.889 * pO2;
+  const cElec = 0.25 * pElec;
+  const capex = 1e6 * Math.pow(cap / 1000, 0.6);
+  const amort = capex / (cap * 1000 * 10);
+  const opex = cH2 + cO2 + cElec + amort;
+
+  $('coutReact').textContent = fmt(cH2 + cO2, 3) + ' €/kg';
+  $('coutElec').textContent = fmt(cElec, 3) + ' €/kg';
+  $('opex').textContent = fmt(opex, 3) + ' €/kg';
+  $('capex').textContent = capex > 1e6 ? fmt(capex / 1e6, 2) + ' M€' : fmt(capex / 1e3, 0) + ' k€';
+
+  ecoData = { cH2, cO2, cElec, amort };
+  drawCoutChart();
+}
+
+function drawCoutChart() {
+  const c = $('chartCout');
+  if (!c) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  if (rect.width === 0) return;
+  c.width = rect.width * dpr;
+  c.height = rect.height * dpr;
+  const ctx = c.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = rect.width, H = rect.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const pad = { l: 100, r: 70, t: 12, b: 12 };
+  const w = W - pad.l - pad.r;
+  const h = H - pad.t - pad.b;
+
+  const items = [
+    { label: 'H₂', val: ecoData.cH2, color: '#0055A4' },
+    { label: 'O₂', val: ecoData.cO2, color: '#6B4FBB' },
+    { label: 'Énergie', val: ecoData.cElec, color: '#1B7F4B' },
+    { label: 'CAPEX/amort.', val: ecoData.amort, color: '#EF4135' }
+  ];
+  const max = Math.max(...items.map(i => i.val), 0.01);
+  const rowH = h / items.length;
+
+  items.forEach((item, i) => {
+    const y = pad.t + i * rowH + rowH * 0.15;
+    const barH = rowH * 0.7;
+    const barW = w * (item.val / max);
+
+    ctx.fillStyle = '#EAF1F8';
+    ctx.fillRect(pad.l, y, w, barH);
+
+    ctx.fillStyle = item.color;
+    ctx.fillRect(pad.l, y, barW, barH);
+
+    ctx.fillStyle = '#2C4A6E';
+    ctx.font = `700 11px ${getComputedStyle(document.body).getPropertyValue('--mono')}`;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(item.label, pad.l - 10, y + barH / 2);
+
+    ctx.fillStyle = '#0B2545';
+    ctx.textAlign = 'left';
+    ctx.fillText(fmt(item.val, 3) + ' €', pad.l + w + 10, y + barH / 2);
+  });
+}
+
+$('prixH2').addEventListener('input', calcEco);
+$('prixO2').addEventListener('input', calcEco);
+$('prixElec').addEventListener('input', calcEco);
+$('cap').addEventListener('input', calcEco);
+
+/* ============================================================
+   SAFETY – LEAK
+   ============================================================ */
+$('leak').addEventListener('input', () => {
+  const leak = parseFloat($('leak').value);
+  $('leakVal').textContent = fmt(leak, 1) + ' % vol.';
+  $('leakConc').textContent = fmt(leak, 1) + ' %';
+  $('leakBar').style.width = Math.min(100, leak / 4 * 100) + '%';
+
+  const status = $('leakStatus');
+  const note = $('leakNote');
+  if (leak < 0.4) {
+    status.textContent = 'Système nominal';
+    status.style.color = 'var(--text-3)';
+    $('leakBar').style.background = 'var(--fr-blue)';
+    note.className = 'alert info';
+    note.innerHTML = `<span class="alert-icon">ℹ️</span><div>Concentration normale. Aucune action requise.</div>`;
+  } else if (leak < 1) {
+    status.textContent = '⚠️ Alerte 10 % LIE';
+    status.style.color = 'var(--yellow)';
+    $('leakBar').style.background = 'var(--yellow)';
+    note.className = 'alert warn';
+    note.innerHTML = `<span class="alert-icon">⚠️</span><div><strong>Seuil d'alerte atteint</strong> (10 % LIE). Vérifier la ventilation et les détecteurs.</div>`;
+  } else if (leak < 4) {
+    status.textContent = '🚨 Alarme 25 % LIE';
+    status.style.color = 'var(--fr-red)';
+    $('leakBar').style.background = 'var(--fr-red)';
+    note.className = 'alert danger';
+    note.innerHTML = `<span class="alert-icon">🚨</span><div><strong>Alarme déclenchée.</strong> Arrêt d'urgence recommandé, évacuation partielle.</div>`;
+  } else {
+    status.textContent = '💥 Zone explosive';
+    status.style.color = 'var(--fr-red)';
+    $('leakBar').style.background = 'var(--fr-red)';
+    note.className = 'alert danger';
+    note.innerHTML = `<span class="alert-icon">💥</span><div><strong>DANGER :</strong> concentration dans la plage explosive (4–75 %). Évacuation immédiate, coupure des sources d'inflammation.</div>`;
+  }
+});
+
+/* ============================================================
+   SPARKLINES
+   ============================================================ */
+function drawSparklines() {
+  drawSpark('sparkEnergy', [8, 12, 15, 14, 16, 15, 17, 15.9, 16, 15.9], '#0055A4');
+  drawSpark('sparkTemp', [2800, 2900, 3050, 3080, 3100, 3090, 3080, 3080, 3085, 3080], '#EF4135');
+  drawSpark('sparkLIE', [4, 4, 4, 4, 4, 4, 4, 4, 4, 4], '#B8860B');
+  drawSpark('sparkCost', [0.7, 0.68, 0.65, 0.63, 0.62, 0.61, 0.60, 0.62, 0.63, 0.62], '#1B7F4B');
+}
+
+function drawSpark(id, data, color) {
+  const c = $(id);
+  if (!c) return;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = c.getBoundingClientRect();
+  if (rect.width === 0) return;
+  c.width = rect.width * dpr;
+  c.height = rect.height * dpr;
+  const ctx = c.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const W = rect.width, H = rect.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = (i / (data.length - 1)) * W;
+    const y = H - ((v - min) / range) * (H - 4) - 2;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, color + '33');
+  grad.addColorStop(1, color + '00');
+  ctx.fillStyle = grad;
+  ctx.lineTo(W, H);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/* ============================================================
+   EXPORT & PRINT
+   ============================================================ */
+$('exportBtn').addEventListener('click', () => {
+  const data = {
+    timestamp: new Date().toISOString(),
+    thermo: {
+      T: parseFloat($('temp').value),
+      P: parseFloat($('press').value),
+      dG: $('dG').textContent,
+      Keq: $('Keq').textContent,
+      conv: $('convEq').textContent
+    },
+    reactor: {
+      production: parseFloat($('prod').value),
+      ghsv: parseFloat($('ghsv').value),
+      catalyst: $('catalyst').value,
+      volume: $('volReac').textContent,
+      masse: $('masseCat').textContent
+    },
+    economy: {
+      prixH2: parseFloat($('prixH2').value),
+      prixO2: parseFloat($('prixO2').value),
+      prixElec: parseFloat($('prixElec').value),
+      capacite: parseFloat($('cap').value),
+      opex: $('opex').textContent,
+      capex: $('capex').textContent
+    }
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `h2o-synthesis-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Export réussi', 'Données sauvegardées en JSON', 'success');
+});
+
+$('printBtn').addEventListener('click', () => window.print());
+
+/* ============================================================
+   CLOCK
+   ============================================================ */
+function updateClock() {
+  $('sbClock').textContent = new Date().toLocaleTimeString('fr-FR');
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ============================================================
+   KEYBOARD
+   ============================================================ */
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey) {
+    if (e.key === 'p') { e.preventDefault(); $('printBtn').click(); }
+    if (e.key === 'e') { e.preventDefault(); $('exportBtn').click(); }
+  }
+  if (e.key === 'Escape') $('modalOverlay').classList.remove('visible');
+});
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init() {
+  calcThermo();
+  calcReactor();
+  calcEco();
+  drawSparklines();
+  setTimeout(() => {
+    resizeMol(); drawMol();
+    resizeReactor();
+    calcThermo();
+    calcEco();
+    drawSparklines();
+  }, 200);
+}
+
+window.addEventListener('resize', () => {
+  drawMol();
+  drawKeqChart(parseFloat($('temp').value));
+  drawCoutChart();
+  drawReactor();
+  drawSparklines();
+});
+
+init();
+
+setTimeout(() => {
+  toast('H₂O Synthesis Console', 'Ctrl+E export · Ctrl+P impression', 'info', 5000);
+}, 800);
+</script>
+</body>
+</html>
